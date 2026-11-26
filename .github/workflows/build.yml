@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Theos
+        run: |
+          git clone --recursive --depth 1 https://github.com/theos/theos.git "$HOME/theos"
+          echo "THEOS=$HOME/theos" >> "$GITHUB_ENV"
+          brew install ldid xcodegen
+
+      - name: Build tweak (mobtok.dylib)
+        run: |
+          cd tweak
+          make FINALPACKAGE=1
+          DYLIB=$(find .theos/obj -name mobtok.dylib | head -1)
+          test -n "$DYLIB"
+          cp "$DYLIB" ../patcher/MobtokPatcher/mobtok.dylib
+
+      - name: Build patcher (unsigned IPA)
+        run: |
+          cd patcher
+          xcodegen
+          xcodebuild -project MobtokPatcher.xcodeproj -scheme MobtokPatcher -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/MobtokPatcher.app Payload/
+          zip -qr ../mobtok-patcher-unsigned.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobtok
+          path: |
+            mobtok-patcher-unsigned.ipa
+            patcher/MobtokPatcher/mobtok.dylib
