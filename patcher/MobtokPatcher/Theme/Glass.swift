@@ -189,7 +189,7 @@ struct PillButtonStyle: ButtonStyle {
         @Environment(\.isEnabled) private var enabled
         var body: some View {
             configuration.label
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
+                .font(.mt(17, .medium, relativeTo: .headline))
                 .frame(maxWidth: .infinity, minHeight: 56)
                 .foregroundStyle(filled ? Palette.onPrimary : Palette.onContainer)
                 .background {

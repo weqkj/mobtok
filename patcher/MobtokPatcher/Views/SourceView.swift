@@ -13,7 +13,7 @@ struct SourceView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Источник").font(.system(size: 36, weight: .bold, design: .rounded)).foregroundStyle(Palette.ink).padding(.bottom, 20).rise(0)
+            Text("Источник").font(.mt(36, .bold, relativeTo: .largeTitle)).foregroundStyle(Palette.ink).padding(.bottom, 20).rise(0)
 
             dropZone.rise(1)
 
@@ -25,11 +25,11 @@ struct SourceView: View {
                     installedRow.glass().rise(3)
 
             if let error {
-                Text(error).font(.footnote).foregroundStyle(Color(hex: 0xFFB4AB)).padding(.top, 8).padding(.horizontal, 16)
+                Text(error).font(.mtFoot).foregroundStyle(Color(hex: 0xFFB4AB)).padding(.top, 8).padding(.horizontal, 16)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             } else {
                 Text("Нужен расшифрованный IPA. Патчер проверит версию перед сборкой.")
-                    .font(.footnote).foregroundStyle(Palette.muted).padding(.top, 8).padding(.horizontal, 16)
+                    .font(.mtFoot).foregroundStyle(Palette.muted).padding(.top, 8).padding(.horizontal, 16)
             }
                 }
             }
@@ -38,7 +38,7 @@ struct SourceView: View {
                 .opacity(state.sourceIPA == nil ? 0.5 : 1).rise(4)
         }
         .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 12)
-        .fileImporter(isPresented: $picking, allowedContentTypes: [Self.ipaType]) { accept($0) }
+        .fileImporter(isPresented: $picking, allowedContentTypes: [Self.ipaType, .data, .archive]) { accept($0) }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: error)
     }
 
@@ -48,9 +48,9 @@ struct SourceView: View {
                 .font(.system(size: 40, weight: .light))
                 .foregroundStyle(state.sourceIPA == nil ? Palette.primary : Palette.tertiary)
                 .symbolRenderingModeIfAvailable()
-            Text(state.sourceIPA?.lastPathComponent ?? "Перетащите TikTok.ipa").font(.headline).lineLimit(1)
+            Text(state.sourceIPA?.lastPathComponent ?? "Перетащите TikTok.ipa").font(.mtHeadline).lineLimit(1)
                 .foregroundStyle(Palette.ink)
-            Button("или выберите в Файлах") { picking = true }.font(.subheadline)
+            Button("или выберите в Файлах") { picking = true }.font(.mtSub)
         }
         .frame(maxWidth: .infinity, minHeight: 170)
         .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(.ultraThinMaterial))
@@ -75,10 +75,10 @@ struct SourceView: View {
             HStack(spacing: 12) {
                 IconTile(symbol: "lock.open", tint: Palette.tertiary)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Расшифровать установленный TikTok").font(.body).foregroundStyle(Palette.ink)
+                    Text("Расшифровать установленный TikTok").font(.mtBody).foregroundStyle(Palette.ink)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(Decryptor.isAvailable ? "Доступно через TrollStore" : "Нужен TrollStore или джейлбрейк")
-                        .font(.footnote).foregroundStyle(Decryptor.isAvailable ? Palette.tertiary : Palette.muted)
+                        .font(.mtFoot).foregroundStyle(Decryptor.isAvailable ? Palette.tertiary : Palette.muted)
                 }
             }
             Button("Расшифровать") {
@@ -103,7 +103,7 @@ struct SourceView: View {
             if downloader.isRunning {
                 ProgressView(value: downloader.progress).tint(Palette.primary)
                     .animation(.easeInOut(duration: 0.3), value: downloader.progress)
-                Text(downloader.status).font(.footnote).foregroundStyle(Palette.muted)
+                Text(downloader.status).font(.mtFoot).foregroundStyle(Palette.muted)
             }
             Button(downloader.isRunning ? "Отменить" : "Скачать") {
                 if downloader.isRunning { downloader.cancel(); return }
@@ -123,23 +123,45 @@ struct SourceView: View {
     }
 
     private func header(_ t: String) -> some View {
-        Text(t).font(.footnote).foregroundStyle(Palette.muted)
+        Text(t).font(.mtFoot).foregroundStyle(Palette.muted)
             .padding(.top, 20).padding(.leading, 16).padding(.bottom, 6)
     }
 
     private func accept(_ r: Result<URL, Error>) {
         switch r {
+        case .failure(let e): error = e.localizedDescription
         case .success(let url):
+            Task {
+                do {
+                    let dst = try await Self.importFile(url)
+                    withAnimation(.spring()) { state.sourceIPA = dst; error = nil }
+                } catch { self.error = "Не удалось открыть файл: \(error.localizedDescription)" }
+            }
+        }
+    }
+
+    /// Копирует выбранный файл в рабочую папку. Чтение идёт через NSFileCoordinator
+    /// внутри security-scope: так работают iCloud, «На iPhone» и сторонние провайдеры.
+    private static func importFile(_ url: URL) async throws -> URL {
+        try await Task.detached(priority: .userInitiated) {
+            let fm = FileManager.default
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            let dst = Workspace.inbox.appendingPathComponent("source.ipa")
-            do {
-                try? FileManager.default.removeItem(at: dst)
-                try FileManager.default.copyItem(at: url, to: dst)
-                withAnimation(.spring()) { state.sourceIPA = dst; error = nil }
-            } catch { self.error = "Не удалось открыть файл: \(error.localizedDescription)" }
-        case .failure(let e): error = e.localizedDescription
-        }
+            // уникальное имя: не затираем исходник, если он уже лежит в Inbox
+            let dst = Workspace.inbox.appendingPathComponent("\(UUID().uuidString).ipa")
+            var coordError: NSError?
+            var copyError: Error?
+            NSFileCoordinator().coordinate(readingItemAt: url, options: [.withoutChanges], error: &coordError) { readURL in
+                do { try fm.copyItem(at: readURL, to: dst) } catch { copyError = error }
+            }
+            if let e = coordError ?? copyError as NSError? { throw e }
+            guard fm.fileExists(atPath: dst.path) else { throw PatchError("Файл не скопировался") }
+            // чистим старые импорты
+            for f in (try? fm.contentsOfDirectory(at: Workspace.inbox, includingPropertiesForKeys: nil)) ?? [] where f != dst {
+                try? fm.removeItem(at: f)
+            }
+            return dst
+        }.value
     }
 }
 

@@ -101,6 +101,12 @@ assets/    иконки и картинки для этой страницы
 
 <br>
 
+## Шрифты
+
+Интерфейс набран Google Sans, а широкое «mobtok» — Google Sans Flex. Оба шрифта открыты под SIL Open Font License 1.1, тексты лицензий лежат в `patcher/MobtokPatcher/Fonts/` и `tweak/`.
+
+<br>
+
 ## Спасибо
 
 Идея выросла из **[SkyTok](https://git.skytok.site/skytok/SkyTok)**, мода от **nebesnyy**. Код mobtok написан с нуля, но без SkyTok его бы не было. Загляните к автору:

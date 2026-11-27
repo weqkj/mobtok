@@ -4,13 +4,15 @@
 #import "MTSettings.h"
 #import "MTPrefs.h"
 #import <LocalAuthentication/LocalAuthentication.h>
+#import "MTFont.h"
+#import "MTShapeField.h"
 
 #define RGB(h) [UIColor colorWithRed:((h>>16)&0xFF)/255.0 green:((h>>8)&0xFF)/255.0 blue:(h&0xFF)/255.0 alpha:1]
-static UIColor *Surface(void)   { return RGB(0x111318); }
-static UIColor *Container(void) { return RGB(0x1D2024); }
-static UIColor *Primary(void)   { return RGB(0xA8C7FA); }
-static UIColor *OnSurface(void) { return RGB(0xE2E2E9); }
-static UIColor *Variant(void)   { return RGB(0xC4C6D0); }
+static UIColor *Surface(void)   { return RGB(0x191113); }
+static UIColor *Container(void) { return [RGB(0x2A1F22) colorWithAlphaComponent:0.55]; }
+static UIColor *Primary(void)   { return RGB(0xFFB0C8); }
+static UIColor *OnSurface(void) { return RGB(0xF0DEE1); }
+static UIColor *Variant(void)   { return RGB(0xD5C2C6); }
 
 typedef NSArray<NSString *> Row;   // @[ключ, название, подпись]
 
@@ -18,6 +20,8 @@ typedef NSArray<NSString *> Row;   // @[ключ, название, подпис
 @property (nonatomic, copy) NSArray<NSArray *> *groups;   // @[название, @[Row]]
 @property (nonatomic, copy) NSString *filter;
 @property (nonatomic, strong) UIStackView *chips;
+@property (nonatomic, strong) MTShapeField *field;
+@property (nonatomic, strong) NSMutableSet<NSIndexPath *> *shown;
 @end
 
 @implementation MTSettings
@@ -67,14 +71,53 @@ typedef NSArray<NSString *> Row;   // @[ключ, название, подпис
     self.title = @"mobtok";
     self.overrideUserInterfaceStyle = UIUserInterfaceStyleDark;
     self.navigationController.navigationBar.prefersLargeTitles = YES;
-    self.navigationController.navigationBar.largeTitleTextAttributes = @{ NSForegroundColorAttributeName: OnSurface() };
     self.navigationController.navigationBar.tintColor = Primary();
     self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
                                                                                            target:self action:@selector(close)];
+    _field = [[MTShapeField alloc] initWithFrame:self.view.bounds];
+    self.tableView.backgroundView = _field;
     self.tableView.backgroundColor = Surface();
-    self.tableView.separatorColor = RGB(0x2B2E33);
+    _shown = [NSMutableSet set];
+    UINavigationBarAppearance *ap = [UINavigationBarAppearance new];
+    [ap configureWithTransparentBackground];
+    ap.largeTitleTextAttributes = @{ NSForegroundColorAttributeName: OnSurface(), NSFontAttributeName: [MTFont display:38] };
+    ap.titleTextAttributes = @{ NSForegroundColorAttributeName: OnSurface(), NSFontAttributeName: [MTFont display:18] };
+    self.navigationItem.standardAppearance = ap;
+    self.navigationItem.scrollEdgeAppearance = ap;
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(kick:)];
+    tap.cancelsTouchesInView = NO;
+    [self.view addGestureRecognizer:tap];
+    self.tableView.separatorColor = [RGB(0x9E8C90) colorWithAlphaComponent:0.25];
     self.tableView.sectionHeaderTopPadding = 12;
     self.tableView.tableHeaderView = [self chipBar];
+}
+
+// Любое касание толкает фигуры на фоне
+- (void)kick:(UITapGestureRecognizer *)g { [_field kickFrom:[g locationInView:_field] power:0.6]; }
+
+// Каскадное появление строк: снизу, с лёгким масштабом, по очереди
+- (void)tableView:(UITableView *)tv willDisplayCell:(UITableViewCell *)c forRowAtIndexPath:(NSIndexPath *)ip {
+    if ([_shown containsObject:ip] || UIAccessibilityIsReduceMotionEnabled()) return;
+    [_shown addObject:ip];
+    c.alpha = 0;
+    c.transform = CGAffineTransformScale(CGAffineTransformMakeTranslation(0, 24), 0.97, 0.97);
+    NSTimeInterval delay = MIN(0.5, (ip.section * 3 + ip.row) * 0.035);
+    [UIView animateWithDuration:0.65 delay:delay usingSpringWithDamping:0.8 initialSpringVelocity:0
+                        options:UIViewAnimationOptionAllowUserInteraction animations:^{
+        c.alpha = 1; c.transform = CGAffineTransformIdentity;
+    } completion:nil];
+}
+
+// Пружинное нажатие на строку
+- (void)tableView:(UITableView *)tv didHighlightRowAtIndexPath:(NSIndexPath *)ip {
+    UITableViewCell *c = [tv cellForRowAtIndexPath:ip];
+    [UIView animateWithDuration:0.25 delay:0 usingSpringWithDamping:0.7 initialSpringVelocity:0 options:UIViewAnimationOptionAllowUserInteraction
+                     animations:^{ c.transform = CGAffineTransformMakeScale(0.97, 0.97); } completion:nil];
+}
+- (void)tableView:(UITableView *)tv didUnhighlightRowAtIndexPath:(NSIndexPath *)ip {
+    UITableViewCell *c = [tv cellForRowAtIndexPath:ip];
+    [UIView animateWithDuration:0.45 delay:0 usingSpringWithDamping:0.5 initialSpringVelocity:0.8 options:UIViewAnimationOptionAllowUserInteraction
+                     animations:^{ c.transform = CGAffineTransformIdentity; } completion:nil];
 }
 
 - (void)close { [self dismissViewControllerAnimated:YES completion:nil]; }
@@ -98,7 +141,7 @@ typedef NSArray<NSString *> Row;   // @[ключ, название, подпис
     for (NSString *n in names) {
         UIButton *b = [UIButton buttonWithType:UIButtonTypeSystem];
         [b setTitle:n forState:UIControlStateNormal];
-        b.titleLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
+        b.titleLabel.font = [MTFont size:14 weight:UIFontWeightMedium];
         b.contentEdgeInsets = UIEdgeInsetsMake(0, 16, 0, 16);
         b.layer.cornerRadius = 12;
         b.layer.cornerCurve = kCACornerCurveContinuous;
@@ -112,15 +155,20 @@ typedef NSArray<NSString *> Row;   // @[ключ, название, подпис
 - (void)styleChips {
     for (UIButton *b in _chips.arrangedSubviews) {
         BOOL on = [b.currentTitle isEqualToString:_filter];
-        b.backgroundColor = on ? RGB(0x004A77) : UIColor.clearColor;
+        b.backgroundColor = on ? RGB(0x5E1133) : UIColor.clearColor;
         b.layer.borderWidth = on ? 0 : 1;
-        b.layer.borderColor = RGB(0x44474E).CGColor;
-        [b setTitleColor:on ? RGB(0xD3E3FD) : Variant() forState:UIControlStateNormal];
+        b.layer.borderColor = RGB(0x524346).CGColor;
+        [b setTitleColor:on ? RGB(0xFFD8E4) : Variant() forState:UIControlStateNormal];
     }
 }
 
 - (void)chip:(UIButton *)b {
     _filter = b.currentTitle;
+    [_field kickFrom:[b convertPoint:CGPointMake(CGRectGetMidX(b.bounds), CGRectGetMidY(b.bounds)) toView:_field] power:0.9];
+    b.transform = CGAffineTransformMakeScale(0.92, 0.92);
+    [UIView animateWithDuration:0.5 delay:0 usingSpringWithDamping:0.45 initialSpringVelocity:1 options:0
+                     animations:^{ b.transform = CGAffineTransformIdentity; } completion:nil];
+    [_shown removeAllObjects];
     UIImpactFeedbackGenerator *h = [[UIImpactFeedbackGenerator alloc] initWithStyle:UIImpactFeedbackStyleLight];
     [h impactOccurred];
     [UIView animateWithDuration:0.3 delay:0 usingSpringWithDamping:0.8 initialSpringVelocity:0 options:0
@@ -145,7 +193,7 @@ typedef NSArray<NSString *> Row;   // @[ключ, название, подпис
 - (NSString *)tableView:(UITableView *)tv titleForHeaderInSection:(NSInteger)s { return self.visible[s][0]; }
 - (void)tableView:(UITableView *)tv willDisplayHeaderView:(UITableViewHeaderFooterView *)v forSection:(NSInteger)s {
     v.textLabel.textColor = Primary();
-    v.textLabel.font = [UIFont systemFontOfSize:14 weight:UIFontWeightMedium];
+    v.textLabel.font = [MTFont size:14 weight:UIFontWeightMedium];
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tv cellForRowAtIndexPath:(NSIndexPath *)ip {
@@ -153,9 +201,12 @@ typedef NSArray<NSString *> Row;   // @[ключ, название, подпис
     UITableViewCell *c = [[UITableViewCell alloc] initWithStyle:UITableViewCellStyleSubtitle reuseIdentifier:nil];
     c.backgroundColor = Container();
     c.selectionStyle = UITableViewCellSelectionStyleNone;
+    c.layer.cornerCurve = kCACornerCurveContinuous;
     c.textLabel.textColor = OnSurface();
     c.detailTextLabel.textColor = Variant();
-    c.textLabel.font = [UIFont systemFontOfSize:16];
+    c.textLabel.font = [MTFont size:16 weight:UIFontWeightRegular];
+    c.detailTextLabel.font = [MTFont size:13 weight:UIFontWeightRegular];
+    c.textLabel.adjustsFontForContentSizeCategory = YES;
 
     if (ip.row >= (NSInteger)rows.count) return [self blurCell:c index:ip.row - rows.count];
 
@@ -178,14 +229,15 @@ typedef NSArray<NSString *> Row;   // @[ключ, название, подпис
         UISlider *s = [[UISlider alloc] initWithFrame:CGRectMake(0, 0, 150, 44)];
         s.value = MTPrefs.motionBlurStrength;
         s.minimumTrackTintColor = Primary();
-        s.maximumTrackTintColor = RGB(0x004A77);
+        s.maximumTrackTintColor = RGB(0x5E1133);
         [s addTarget:self action:@selector(blurStrength:) forControlEvents:UIControlEventValueChanged];
         c.accessoryView = s;
     } else {
         UISegmentedControl *seg = [[UISegmentedControl alloc] initWithItems:@[@"Мягкий", @"Кино", @"Сильный"]];
         seg.selectedSegmentIndex = MTPrefs.motionBlurMode;
         seg.selectedSegmentTintColor = Primary();
-        [seg setTitleTextAttributes:@{NSForegroundColorAttributeName: RGB(0x0A305F)} forState:UIControlStateSelected];
+        [seg setTitleTextAttributes:@{NSForegroundColorAttributeName: RGB(0x3B1220), NSFontAttributeName: [MTFont size:13 weight:UIFontWeightMedium]} forState:UIControlStateSelected];
+        [seg setTitleTextAttributes:@{NSForegroundColorAttributeName: Variant(), NSFontAttributeName: [MTFont size:13 weight:UIFontWeightRegular]} forState:UIControlStateNormal];
         [seg addTarget:self action:@selector(blurMode:) forControlEvents:UIControlEventValueChanged];
         c.textLabel.text = @"Режим";
         c.detailTextLabel.text = @"GPU · выключается при перегреве";
@@ -197,6 +249,7 @@ typedef NSArray<NSString *> Row;   // @[ключ, название, подпис
 
 - (void)toggle:(UISwitch *)sw {
     [MTPrefs setBool:sw.on forKey:sw.accessibilityIdentifier];
+    [_field kickFrom:[sw convertPoint:CGPointZero toView:_field] power:0.5];
     [[UISelectionFeedbackGenerator new] selectionChanged];
     if ([sw.accessibilityIdentifier isEqualToString:@"mb"])
         [self.tableView reloadSections:[NSIndexSet indexSetWithIndexesInRange:NSMakeRange(0, self.visible.count)]

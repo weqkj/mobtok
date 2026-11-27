@@ -7,9 +7,9 @@ struct WelcomeView: View {
             Spacer()
             Image("Logo").resizable().frame(width: 120, height: 120)
                 .shadow(color: Palette.primary.opacity(0.35), radius: 24, y: 10).rise(0)
-            Text("mobtok").font(.system(size: 36, weight: .bold, design: .rounded)).foregroundStyle(Palette.ink).padding(.top, 16).rise(1)
+            Text("mobtok").font(.mt(36, .bold, relativeTo: .largeTitle)).foregroundStyle(Palette.ink).padding(.top, 16).rise(1)
             Text("Соберите мод TikTok за пару минут — без компьютера и лишних шагов.")
-                .font(.body).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
+                .font(.mtBody).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
                 .padding(.top, 8).rise(2)
             Spacer()
             VStack(alignment: .leading, spacing: 18) {
@@ -27,8 +27,8 @@ struct WelcomeView: View {
         HStack(spacing: 14) {
             IconTile(symbol: s, tint: c)
             VStack(alignment: .leading, spacing: 2) {
-                Text(t).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.ink)
-                Text(sub).font(.footnote).foregroundStyle(Palette.muted)
+                Text(t).font(.mtSubMedium).foregroundStyle(Palette.ink)
+                Text(sub).font(.mtFoot).foregroundStyle(Palette.muted)
             }
         }
     }
