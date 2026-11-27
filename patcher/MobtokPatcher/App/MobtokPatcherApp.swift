@@ -3,11 +3,14 @@ import SwiftUI
 @main
 struct MobtokPatcherApp: App {
     @StateObject private var state = AppState()
+
+    init() { MTFont.registerAll() }
     var body: some Scene {
         WindowGroup {
             RootView().environmentObject(state)
                 .preferredColorScheme(.dark)    // M3 тёмная схема поверх летающих фигур
                 .tint(Palette.primary)
+                .font(.mtBody)
         }
     }
 }
