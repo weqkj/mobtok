@@ -8,7 +8,7 @@ struct InstallView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Установка").font(.system(size: 34, weight: .bold)).padding(.bottom, 20).rise(0)
+            Text("Установка").font(.system(size: 36, weight: .bold, design: .rounded)).foregroundStyle(Palette.ink).padding(.bottom, 20).rise(0)
 
             progressCard.glass().rise(1)
 
@@ -31,8 +31,9 @@ struct InstallView: View {
                         }
                         .padding(.horizontal, 16).padding(.vertical, 10).contentShape(Rectangle())
                     }
+                    .buttonStyle(BounceStyle())
                     .accessibilityAddTraits(method == m ? .isSelected : [])
-                    if m != InstallMethod.allCases.last { Divider().padding(.leading, 72) }
+                    if m != InstallMethod.allCases.last { Divider().overlay(Palette.outline.opacity(0.3)).padding(.leading, 72) }
                 }
             }.glass().rise(2)
 
@@ -56,9 +57,9 @@ struct InstallView: View {
             HStack {
                 Text(state.job.phase.title)
                 Spacer()
-                if state.job.phase == .done { Text("mobtok.ipa").foregroundStyle(.green) }
-            }.font(.subheadline)
-            ProgressView(value: state.job.progress).tint(state.job.phase == .failed ? .red : .green)
+                if state.job.phase == .done { Text("mobtok.ipa").foregroundStyle(Palette.primary) }
+            }.font(.subheadline).foregroundStyle(Palette.ink)
+            ProgressView(value: state.job.progress).tint(state.job.phase == .failed ? Color(hex: 0xFFB4AB) : Palette.primary)
                 .animation(.easeInOut(duration: 0.4), value: state.job.progress)
             Text(state.job.detail).font(.footnote).foregroundStyle(Palette.muted).lineLimit(2)
         }.padding(16)

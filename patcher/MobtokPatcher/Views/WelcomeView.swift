@@ -5,18 +5,17 @@ struct WelcomeView: View {
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
-            Image("Logo").resizable().frame(width: 96, height: 96)
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-                .shadow(color: .black.opacity(0.25), radius: 12, y: 12).rise(0)
-            Text("mobtok").font(.system(size: 34, weight: .bold)).padding(.top, 16).rise(1)
+            Image("Logo").resizable().frame(width: 120, height: 120)
+                .shadow(color: Palette.primary.opacity(0.35), radius: 24, y: 10).rise(0)
+            Text("mobtok").font(.system(size: 36, weight: .bold, design: .rounded)).foregroundStyle(Palette.ink).padding(.top, 16).rise(1)
             Text("Соберите мод TikTok за пару минут — без компьютера и лишних шагов.")
                 .font(.body).foregroundStyle(Palette.muted).multilineTextAlignment(.center)
                 .padding(.top, 8).rise(2)
             Spacer()
             VStack(alignment: .leading, spacing: 18) {
-                row("square.and.arrow.down", .blue, "Свой IPA или установленный TikTok", "Перетащите файл или расшифруйте приложение")
-                row("slider.horizontal.3", .green, "Настройки — прямо в TikTok", "Меню mobtok появится в настройках приложения")
-                row("iphone", .indigo, "Три способа установки", "Джейлбрейк, Sideloadly или сертификат")
+                row("square.and.arrow.down", Palette.primary, "Свой IPA или установленный TikTok", "Перетащите файл или расшифруйте приложение")
+                row("slider.horizontal.3", Palette.tertiary, "Настройки — прямо в TikTok", "Меню mobtok появится в настройках приложения")
+                row("iphone", Color(hex: 0xD7BAFF), "Три способа установки", "Джейлбрейк, Sideloadly или сертификат")
             }.rise(3)
             Button("Продолжить") { state.go(.disclaimer) }
                 .buttonStyle(PillButtonStyle()).padding(.top, 32).rise(4)
@@ -28,7 +27,7 @@ struct WelcomeView: View {
         HStack(spacing: 14) {
             IconTile(symbol: s, tint: c)
             VStack(alignment: .leading, spacing: 2) {
-                Text(t).font(.subheadline.weight(.semibold))
+                Text(t).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.ink)
                 Text(sub).font(.footnote).foregroundStyle(Palette.muted)
             }
         }

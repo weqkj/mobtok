@@ -6,7 +6,8 @@ struct MobtokPatcherApp: App {
     var body: some Scene {
         WindowGroup {
             RootView().environmentObject(state)
-                .preferredColorScheme(.light)   // фон патчера светлый — тёмная тема ломала контраст
+                .preferredColorScheme(.dark)    // M3 тёмная схема поверх летающих фигур
+                .tint(Palette.primary)
         }
     }
 }

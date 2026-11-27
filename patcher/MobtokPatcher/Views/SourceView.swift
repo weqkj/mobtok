@@ -13,7 +13,7 @@ struct SourceView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Источник").font(.system(size: 34, weight: .bold)).padding(.bottom, 20).rise(0)
+            Text("Источник").font(.system(size: 36, weight: .bold, design: .rounded)).foregroundStyle(Palette.ink).padding(.bottom, 20).rise(0)
 
             dropZone.rise(1)
 
@@ -25,7 +25,7 @@ struct SourceView: View {
                     installedRow.glass().rise(3)
 
             if let error {
-                Text(error).font(.footnote).foregroundStyle(.red).padding(.top, 8).padding(.horizontal, 16)
+                Text(error).font(.footnote).foregroundStyle(Color(hex: 0xFFB4AB)).padding(.top, 8).padding(.horizontal, 16)
                     .transition(.opacity.combined(with: .move(edge: .top)))
             } else {
                 Text("Нужен расшифрованный IPA. Патчер проверит версию перед сборкой.")
@@ -46,14 +46,14 @@ struct SourceView: View {
         VStack(spacing: 8) {
             Image(systemName: state.sourceIPA == nil ? "square.and.arrow.up" : "checkmark.circle.fill")
                 .font(.system(size: 40, weight: .light))
-                .foregroundStyle(state.sourceIPA == nil ? Palette.primary : .green)
+                .foregroundStyle(state.sourceIPA == nil ? Palette.primary : Palette.tertiary)
                 .symbolRenderingModeIfAvailable()
             Text(state.sourceIPA?.lastPathComponent ?? "Перетащите TikTok.ipa").font(.headline).lineLimit(1)
                 .foregroundStyle(Palette.ink)
             Button("или выберите в Файлах") { picking = true }.font(.subheadline)
         }
         .frame(maxWidth: .infinity, minHeight: 170)
-        .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(.white.opacity(targeted ? 0.7 : 0.45)))
+        .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(.ultraThinMaterial))
         .overlay(RoundedRectangle(cornerRadius: 28, style: .continuous)
             .strokeBorder(Palette.primary.opacity(targeted ? 0.9 : 0.45), style: StrokeStyle(lineWidth: 1.5, dash: [6, 5])))
         .scaleEffect(targeted ? 1.02 : 1)
@@ -73,12 +73,12 @@ struct SourceView: View {
     private var installedRow: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                IconTile(symbol: "lock.open", tint: .orange)
+                IconTile(symbol: "lock.open", tint: Palette.tertiary)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Расшифровать установленный TikTok").font(.body).foregroundStyle(Palette.ink)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(Decryptor.isAvailable ? "Доступно через TrollStore" : "Нужен TrollStore или джейлбрейк")
-                        .font(.footnote).foregroundStyle(Decryptor.isAvailable ? Color.green : Palette.muted)
+                        .font(.footnote).foregroundStyle(Decryptor.isAvailable ? Palette.tertiary : Palette.muted)
                 }
             }
             Button("Расшифровать") {
@@ -95,7 +95,7 @@ struct SourceView: View {
     private var urlRow: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 12) {
-                IconTile(symbol: "link", tint: .blue)
+                IconTile(symbol: "link", tint: Palette.primary)
                 TextField("https://…/TikTok.ipa", text: $link)
                     .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
                     .foregroundStyle(Palette.ink)
