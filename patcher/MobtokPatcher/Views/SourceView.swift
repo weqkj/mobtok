@@ -38,7 +38,7 @@ struct SourceView: View {
                 .opacity(state.sourceIPA == nil ? 0.5 : 1).rise(4)
         }
         .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 12)
-        .fileImporter(isPresented: $picking, allowedContentTypes: [Self.ipaType]) { accept($0) }
+        .fileImporter(isPresented: $picking, allowedContentTypes: [Self.ipaType, .data, .archive]) { accept($0) }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: error)
     }
 
@@ -129,17 +129,39 @@ struct SourceView: View {
 
     private func accept(_ r: Result<URL, Error>) {
         switch r {
+        case .failure(let e): error = e.localizedDescription
         case .success(let url):
+            Task {
+                do {
+                    let dst = try await Self.importFile(url)
+                    withAnimation(.spring()) { state.sourceIPA = dst; error = nil }
+                } catch { self.error = "Не удалось открыть файл: \(error.localizedDescription)" }
+            }
+        }
+    }
+
+    /// Копирует выбранный файл в рабочую папку. Чтение идёт через NSFileCoordinator
+    /// внутри security-scope: так работают iCloud, «На iPhone» и сторонние провайдеры.
+    private static func importFile(_ url: URL) async throws -> URL {
+        try await Task.detached(priority: .userInitiated) {
+            let fm = FileManager.default
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            let dst = Workspace.inbox.appendingPathComponent("source.ipa")
-            do {
-                try? FileManager.default.removeItem(at: dst)
-                try FileManager.default.copyItem(at: url, to: dst)
-                withAnimation(.spring()) { state.sourceIPA = dst; error = nil }
-            } catch { self.error = "Не удалось открыть файл: \(error.localizedDescription)" }
-        case .failure(let e): error = e.localizedDescription
-        }
+            // уникальное имя: не затираем исходник, если он уже лежит в Inbox
+            let dst = Workspace.inbox.appendingPathComponent("\(UUID().uuidString).ipa")
+            var coordError: NSError?
+            var copyError: Error?
+            NSFileCoordinator().coordinate(readingItemAt: url, options: [.withoutChanges], error: &coordError) { readURL in
+                do { try fm.copyItem(at: readURL, to: dst) } catch { copyError = error }
+            }
+            if let e = coordError ?? copyError as NSError? { throw e }
+            guard fm.fileExists(atPath: dst.path) else { throw PatchError("Файл не скопировался") }
+            // чистим старые импорты
+            for f in (try? fm.contentsOfDirectory(at: Workspace.inbox, includingPropertiesForKeys: nil)) ?? [] where f != dst {
+                try? fm.removeItem(at: f)
+            }
+            return dst
+        }.value
     }
 }
 
