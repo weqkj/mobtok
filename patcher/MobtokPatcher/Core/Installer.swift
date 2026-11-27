@@ -24,7 +24,7 @@ enum InstallMethod: String, CaseIterable, Identifiable {
         switch self { case .jailbreak: return "lock.open"; case .sideloadly: return "laptopcomputer"; case .certificate: return "checkmark.shield" }
     }
     var tint: Color {
-        switch self { case .jailbreak: return .orange; case .sideloadly: return .indigo; case .certificate: return .blue }
+        switch self { case .jailbreak: return Palette.tertiary; case .sideloadly: return Color(hex: 0xD7BAFF); case .certificate: return Palette.primary }
     }
 }
 
