@@ -16,6 +16,45 @@ struct IPAPatcher {
 
     static let loadPath = "@executable_path/Frameworks/mobtok.dylib"
 
+    /// Библиотеки, которые подгружают моды и инжекторы. Свои фреймворки TikTok
+    /// подключены как *.framework и сюда не попадают.
+    static let injectorNames = ["CydiaSubstrate", "libsubstrate", "libsubstitute", "substrate", "ellekit",
+                                "libellekit", "libhooker", "Orion", "Cephei", "AltList"]
+
+    static func isForeign(_ path: String) -> Bool {
+        guard path.hasPrefix("@executable_path/") || path.hasPrefix("@rpath/") || path.hasPrefix("@loader_path/")
+                || path.hasPrefix("/Library/MobileSubstrate") || path.hasPrefix("/var/jb") else { return false }
+        if path == loadPath { return true }   // наш прошлый патч — переустановим заново
+        let file = (path as NSString).lastPathComponent
+        if file.hasSuffix(".dylib") { return true }
+        return injectorNames.contains { path.localizedCaseInsensitiveContains($0) }
+    }
+
+    /// Убирает чужие моды: load-команды из бинарника и сами файлы из бандла.
+    static func stripOtherMods(app: URL, binary: URL) throws -> [String] {
+        let fm = FileManager.default
+        let paths = try MachO.removeForeignDylibs(at: binary, isForeign: isForeign)
+        var names: [String] = []
+        for p in paths {
+            var rel = p
+            for prefix in ["@executable_path/", "@loader_path/"] where rel.hasPrefix(prefix) { rel.removeFirst(prefix.count) }
+            if rel.hasPrefix("@rpath/") { rel = "Frameworks/" + rel.dropFirst("@rpath/".count) }
+            if !rel.hasPrefix("/") {
+                var file = app.appendingPathComponent(rel)
+                // для фреймворка удаляем всю папку .framework
+                if let r = rel.range(of: ".framework/") { file = app.appendingPathComponent(String(rel[..<r.lowerBound]) + ".framework") }
+                try? fm.removeItem(at: file)
+            }
+            let n = (p as NSString).lastPathComponent
+            if p != loadPath { names.append(n) }
+        }
+        // бандлы ресурсов модов и подписи
+        for leftover in ["Frameworks/CydiaSubstrate.framework", "Frameworks/ellekit.framework", "_CodeSignature", "embedded.mobileprovision"] {
+            try? fm.removeItem(at: app.appendingPathComponent(leftover))
+        }
+        return names
+    }
+
     typealias Report = (Double, PatchJob.Phase, String) -> Void
 
     func run(report: @escaping Report) async throws -> URL {
@@ -38,7 +77,11 @@ struct IPAPatcher {
             let binary = app.appendingPathComponent(exe)
             if try MachO.isEncrypted(binary) { throw PatchError("IPA зашифрован. Нужен расшифрованный файл.") }
 
-            report(0.5, .injecting, "TikTok \(version)")
+            report(0.45, .injecting, "Поиск других модов…")
+            let removed = try Self.stripOtherMods(app: app, binary: binary)
+            if !removed.isEmpty { report(0.5, .injecting, "Удалено: " + removed.joined(separator: ", ")) }
+
+            report(0.55, .injecting, "TikTok \(version)")
             guard let dylib else { throw PatchError("mobtok.dylib не найден в сборке патчера") }
             let fw = app.appendingPathComponent("Frameworks", isDirectory: true)
             try fm.createDirectory(at: fw, withIntermediateDirectories: true)
@@ -46,7 +89,6 @@ struct IPAPatcher {
             try? fm.removeItem(at: dst)
             try fm.copyItem(at: dylib, to: dst)
             try MachO.insertLoadDylib(at: binary, path: Self.loadPath)
-            try? fm.removeItem(at: app.appendingPathComponent("_CodeSignature"))
 
             report(0.75, .packing, "mobtok.ipa")
             let out = outDir.appendingPathComponent("mobtok-\(version).ipa")

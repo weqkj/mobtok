@@ -26,6 +26,39 @@ enum MachO {
         try data.write(to: url, options: .atomic)
     }
 
+    /// Удаляет из всех срезов чужие инжектированные библиотеки (другие моды).
+    /// Возвращает пути, которые были удалены.
+    static func removeForeignDylibs(at url: URL, isForeign: (String) -> Bool) throws -> [String] {
+        var data = try Data(contentsOf: url)
+        var slices: [Int] = []
+        try forEachSlice(data) { slices.append($0) }
+        var removed = Set<String>()
+        for off in slices {
+            while true {
+                var target: (at: Int, size: Int, path: String)?
+                try forEachCommand(data, sliceOffset: off) { cmd, at in
+                    guard target == nil, cmd == LC_LOAD_DYLIB || cmd == LC_LOAD_WEAK_DYLIB else { return }
+                    let nameOff: UInt32 = data.read(at + 8)
+                    let path = data.cString(at: at + Int(nameOff))
+                    if isForeign(path) { let size: UInt32 = data.read(at + 4); target = (at, Int(size), path) }
+                }
+                guard let t = target else { break }
+                let ncmds: UInt32 = data.read(off + 16)
+                let sizeofcmds: UInt32 = data.read(off + 20)
+                let end = off + MemoryLayout<mach_header_64>.size + Int(sizeofcmds)
+                // сдвигаем хвост команд влево и зануляем освободившееся место
+                let tail = data.subdata(in: (t.at + t.size)..<end)
+                data.replaceSubrange(t.at..<(t.at + tail.count), with: tail)
+                data.replaceSubrange((end - t.size)..<end, with: Data(count: t.size))
+                data.write(ncmds - 1, at: off + 16)
+                data.write(sizeofcmds - UInt32(t.size), at: off + 20)
+                removed.insert(t.path)
+            }
+        }
+        if !removed.isEmpty { try data.write(to: url, options: .atomic) }
+        return removed.sorted()
+    }
+
     // MARK: - internals
 
     private static func insert(into data: inout Data, sliceOffset off: Int, path: String) throws {
