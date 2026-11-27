@@ -1,122 +1,120 @@
 <p align="center">
-  <img src="assets/readme/banner.svg" alt="mobtok — мод TikTok и патчер для iOS" width="100%">
+  <img src="assets/readme/icon.svg" width="132" alt="иконка mobtok">
+</p>
+
+<h1 align="center">mobtok</h1>
+
+<p align="center">
+  <img src="assets/readme/banner.svg" width="100%" alt="mobtok, твой TikTok, только удобнее">
 </p>
 
 <p align="center">
-  <a href="../../actions/workflows/build.yml"><img src="../../actions/workflows/build.yml/badge.svg" alt="Build"></a>
-  <img src="https://img.shields.io/badge/iOS-15%2B-A8C7FA?style=flat-square&labelColor=1D2024" alt="iOS 15+">
-  <img src="https://img.shields.io/badge/Swift-SwiftUI-D7BAFF?style=flat-square&labelColor=1D2024" alt="SwiftUI">
-  <img src="https://img.shields.io/badge/Theos-Logos-8BD8B5?style=flat-square&labelColor=1D2024" alt="Theos">
+  <a href="../../actions/workflows/build.yml"><img src="../../actions/workflows/build.yml/badge.svg" alt="сборка"></a>
+  <img src="https://img.shields.io/badge/iOS-15%2B-FFB0C8?style=flat-square&labelColor=2A1F22" alt="iOS 15+">
+  <img src="https://img.shields.io/badge/SwiftUI-патчер-FFD8E4?style=flat-square&labelColor=2A1F22" alt="SwiftUI">
+  <img src="https://img.shields.io/badge/Theos-мод-F0BC95?style=flat-square&labelColor=2A1F22" alt="Theos">
 </p>
+
+<br>
+
+Захотелось TikTok без водяных знаков, с нормальным регионом и без лишнего мусора в ленте, причём так, чтобы не садиться каждый раз за компьютер. Так появился mobtok: мод и маленький патчер к нему. Кидаешь IPA, ждёшь полминуты, ставишь. Все настройки потом живут прямо в TikTok.
+
+<br>
 
 <p align="center">
-  <b>Соберите мод TikTok за пару минут — прямо на iPhone.</b><br>
-  Патчер в стиле Liquid Glass, меню мода внутри TikTok в Material You 3.
+  <img src="assets/readme/steps.svg" width="100%" alt="три шага: IPA, сборка, установка">
 </p>
 
----
+<br>
 
-## ✦ Что умеет
+## Что внутри
 
 <p align="center">
-  <img src="assets/readme/features.svg" alt="Функции mobtok" width="100%">
+  <img src="assets/readme/features.svg" width="100%" alt="функции mobtok">
 </p>
 
-| | Функция | Статус |
-|:-:|---|:-:|
-| 🎛 | Меню M3 в TikTok: чипы-фильтры, переключатели, вход по Face ID | ✅ |
-| 🌫 | Motion blur по скорости свайпа, 3 режима, автоотключение при перегреве | ✅ v1 |
-| 🌍 | Регион контента: локаль, оператор, параметры запросов | ✅ |
-| 📥 | Загрузчик в «Фото»: видео и карусели | ✅ |
-| 💧 | Без водяного знака · качество · скорость · громкость | 🛠 адаптер |
-| 🚫 | Без рекламы · скрыть Live и Shop · автопрокрутка | 🛠 адаптер |
-| 🖼 | Фон профиля · приватность · перевод · история | 🛠 адаптер |
+Часть функций уже работает, часть ждёт своего часа. Им нужны имена внутренних классов TikTok, а они меняются от версии к версии. Пока имени нет, функция просто молчит, TikTok от этого не ломается.
 
-> **🛠 адаптер** — функция написана, но ждёт имён классов TikTok в [`tweak/src/MTAdapter.x`](tweak/src/MTAdapter.x). До этого она просто не включается, TikTok работает как обычно.
+<table>
+  <tr><td>🎛 Меню в стиле Material You, вход по Face ID</td><td align="center">готово</td></tr>
+  <tr><td>🌫 Motion blur ленты, три режима</td><td align="center">готово</td></tr>
+  <tr><td>🌍 Регион контента</td><td align="center">готово</td></tr>
+  <tr><td>📥 Сохранение в «Фото»</td><td align="center">готово</td></tr>
+  <tr><td>💧 Без водяного знака, качество, скорость</td><td align="center">скоро</td></tr>
+  <tr><td>🚫 Без рекламы, Live и Shop</td><td align="center">скоро</td></tr>
+  <tr><td>🖼 Фон профиля, приватность, перевод</td><td align="center">скоро</td></tr>
+</table>
 
----
+<br>
 
-## ✦ Как это работает
+## Где взять
 
-```
- TikTok.ipa ──▶ распаковка ──▶ проверка ──▶ mobtok.dylib ──▶ упаковка ──▶ mobtok.ipa
-                                             + LC_LOAD_WEAK_DYLIB
-```
+Свежие сборки лежат во вкладке **[Actions](../../actions)**: открываешь последний запуск **Build**, внизу в **Artifacts** забираешь `mobtok`. Внутри неподписанный патчер `mobtok-patcher-unsigned.ipa` и сам мод `mobtok.dylib`.
 
-1. **Источник.** Свой расшифрованный `TikTok.ipa` или расшифровка установленного TikTok (TrollStore / джейлбрейк).
-2. **Патч.** Патчер встраивает мод и пересобирает IPA. Всё на устройстве, без компьютера.
-3. **Установка** — на выбор:
+Патчер нужно подписать перед установкой. Подойдёт Sideloadly, TrollStore или твой сертификат.
 
-| Способ | Как |
-|---|---|
-| 🔓 **Джейлбрейк / TrollStore** | IPA сразу открывается в TrollStore |
-| 💻 **Sideloadly** | Сохранить IPA → поставить с ПК |
-| 🛡 **Сертификат** | Свой `.p12` + `.mobileprovision` |
+<br>
 
----
+## Как ставить мод
 
-## ✦ Скачать
+| | |
+|:-:|---|
+| 📦 | **Источник.** Свой расшифрованный `TikTok.ipa`, прямая ссылка на него или TikTok, который уже стоит на телефоне (для этого нужен TrollStore). Если в файле был другой мод, патчер его аккуратно вычистит. |
+| 🔓 | **TrollStore или джейлбрейк.** Готовый IPA сразу открывается в TrollStore. |
+| 💻 | **Sideloadly.** Сохраняешь IPA в «Файлы» и ставишь с компьютера. |
+| 🛡 | **Сертификат.** Свои `.p12` и `.mobileprovision`. |
 
-Готовые сборки — во вкладке **[Actions](../../actions)** → последний запуск **Build** → **Artifacts** → `mobtok`.
+<br>
 
-Внутри неподписанный `mobtok-patcher-unsigned.ipa` и `mobtok.dylib`. Подпишите IPA через Sideloadly, TrollStore или свой сертификат.
+<details>
+<summary><b>Пара честных уточнений</b></summary>
+<br>
 
----
+**Регион** меняет то, какую страну видит приложение. Лента и рекомендации подстроятся, но если TikTok закрыт провайдером, поможет только VPN.
 
-## ✦ Сборка из исходников
+**Фон профиля** — это новая официальная функция TikTok, её раскатывают не всем сразу. Мод может открыть раздел, но сохранит ли картинку сервер, зависит от TikTok.
+
+**Motion blur** включается только на скорости и сам отключается, когда телефон греется или включён режим энергосбережения.
+
+</details>
+
+<details>
+<summary><b>Собрать самому</b></summary>
+<br>
 
 ```bash
-# 1. мод
-cd tweak && make FINALPACKAGE=1            # нужен Theos
+cd tweak && make FINALPACKAGE=1
 cp .theos/obj/mobtok.dylib ../patcher/MobtokPatcher/
 
-# 2. патчер
 cd ../patcher && xcodegen && open MobtokPatcher.xcodeproj
 ```
 
-<details>
-<summary><b>Структура репозитория</b></summary>
+Понадобятся Theos, Xcode и XcodeGen.
 
 ```
-patcher/            приложение-патчер (SwiftUI, iOS 15+)
-  App/              точка входа, навигация по шагам
-  Views/            экраны: приветствие, дисклеймер, источник, установка
-  Core/             IPAPatcher, Mach-O инжектор, установщики
-  Theme/            Liquid Glass, M3-кнопки, анимации
-tweak/              мод (Theos, Logos/ObjC)
-  src/MTSettings    меню M3 внутри TikTok
-  src/MotionBlur    размытие по скорости свайпа
-  src/Region        подмена региона контента
-  src/MTDownloader  сохранение в «Фото»
-  src/MTAdapter     связь с внутренностями TikTok
-assets/             иконки и графика README
+patcher/   приложение-патчер на SwiftUI
+tweak/     сам мод на Theos
+assets/    иконки и картинки для этой страницы
 ```
+
 </details>
 
-<details>
-<summary><b>Подробнее о функциях</b></summary>
+<br>
 
-**Motion blur.** Радиус размытия ≈ путь ленты за половину кадра — как затвор 180° в After Effects. Медленный скролл остаётся чётким. Выключается при энергосбережении, перегреве и «Уменьшении движения». Следующий шаг — направленный Metal-шейдер.
+## Спасибо
 
-**Регион контента.** Меняет страну, которую видит приложение, а с ней ленту и рекомендации. Блокировку по IP это не обходит — для этого нужен VPN.
-
-**Фон профиля.** Официальная функция TikTok, которую выкатывают постепенно. Мод может открыть раздел в приложении, но сохранение решает сервер TikTok: если аккаунт не в тесте, загрузку могут отклонить.
-
-**Подпись на устройстве.** Подключается через zsign — точка входа `Installer.install`, ветка `.certificate`.
-</details>
-
----
-
-## ✦ Благодарности
-
-mobtok вдохновлён **[SkyTok](https://git.skytok.site/skytok/SkyTok)** от **nebesnyy**. Код mobtok написан заново, из SkyTok он не скопирован.
+Идея выросла из **[SkyTok](https://git.skytok.site/skytok/SkyTok)**, мода от **nebesnyy**. Код mobtok написан с нуля, но без SkyTok его бы не было. Загляните к автору:
 
 <p>
-  <a href="https://t.me/SkyTok_Mod"><img src="https://img.shields.io/badge/Telegram-SkyTok__Mod-A8C7FA?style=for-the-badge&labelColor=1D2024&logo=telegram&logoColor=A8C7FA" alt="Telegram"></a>
-  <a href="https://git.skytok.site/skytok/SkyTok"><img src="https://img.shields.io/badge/Git-SkyTok-D7BAFF?style=for-the-badge&labelColor=1D2024&logo=git&logoColor=D7BAFF" alt="Git"></a>
-  <a href="https://skytok.site"><img src="https://img.shields.io/badge/Сайт-skytok.site-8BD8B5?style=for-the-badge&labelColor=1D2024" alt="Сайт"></a>
+  <a href="https://t.me/SkyTok_Mod"><img src="https://img.shields.io/badge/Telegram-SkyTok__Mod-FFB0C8?style=for-the-badge&labelColor=2A1F22&logo=telegram&logoColor=FFB0C8" alt="Telegram"></a>
+  <a href="https://git.skytok.site/skytok/SkyTok"><img src="https://img.shields.io/badge/Git-SkyTok-FFD8E4?style=for-the-badge&labelColor=2A1F22&logo=git&logoColor=FFD8E4" alt="Git"></a>
+  <a href="https://skytok.site"><img src="https://img.shields.io/badge/сайт-skytok.site-F0BC95?style=for-the-badge&labelColor=2A1F22" alt="сайт"></a>
 </p>
 
----
+<br>
 
-<sub>mobtok — неофициальный мод, не связан с ByteDance и TikTok. Используете на свой риск: аккаунт могут ограничить.</sub>
+<p align="center">
+  <img src="assets/readme/icon.svg" width="40" alt="">
+  <br>
+  <sub>mobtok не связан с ByteDance и TikTok. Это неофициальный мод, ставите на свой страх и риск.</sub>
+</p>
