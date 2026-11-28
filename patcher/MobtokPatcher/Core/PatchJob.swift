@@ -39,6 +39,7 @@ final class PatchJob: ObservableObject {
     var isRunning: Bool { ![.idle, .done, .failed].contains(phase) }
 
     func start(source: URL) async {
+        guard FileManager.default.fileExists(atPath: source.path) else { fail("Файл источника пропал. Выберите IPA заново."); return }
         let size = (try? FileManager.default.attributesOfItem(atPath: source.path)[.size] as? Int) ?? -1
         Log.shared.add("Сборка: \(source.lastPathComponent), \(size / 1_048_576) МБ, dylib: \(Bundle.main.url(forResource: "mobtok", withExtension: "dylib") != nil ? "есть" : "НЕТ")")
         let patcher = IPAPatcher(source: source,

@@ -175,9 +175,11 @@ struct SourceView: View {
                 } catch { lastError = error; Log.write("Попытка \(attempt + 1) не удалась: \(error.localizedDescription)") }
             }
             guard fm.fileExists(atPath: dst.path) else { throw lastError }
-            for f in (try? fm.contentsOfDirectory(at: Workspace.inbox, includingPropertiesForKeys: nil)) ?? [] where f != dst {
+            for f in (try? fm.contentsOfDirectory(at: Workspace.inbox, includingPropertiesForKeys: nil)) ?? [] where f.lastPathComponent != dst.lastPathComponent {
                 try? fm.removeItem(at: f)
             }
+            let size = (try? fm.attributesOfItem(atPath: dst.path)[.size] as? Int) ?? -1
+            Log.write("Скопировано: \(size / 1_048_576) МБ → \(dst.lastPathComponent)")
             return dst
         }.value
     }
