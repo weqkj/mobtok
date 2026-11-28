@@ -76,6 +76,9 @@ struct IPAPatcher {
             guard let exe = info["CFBundleExecutable"] as? String else { throw PatchError("Не найден CFBundleExecutable") }
             let version = info["CFBundleShortVersionString"] as? String ?? "?"
             let binary = app.appendingPathComponent(exe)
+            let hasSC = fm.fileExists(atPath: app.appendingPathComponent("SC_Info").path)
+            let hasMeta = fm.fileExists(atPath: unpack.appendingPathComponent("iTunesMetadata.plist").path)
+            Log.write("Проверка: бинарник \(exe), папка SC_Info: \(hasSC ? "есть" : "нет"), iTunesMetadata: \(hasMeta ? "есть" : "нет")")
             if try MachO.isEncrypted(binary) {
                 throw PatchError("Шаг: проверка шифрования. TikTok \(version) (\(exe)) зашифрован FairPlay: так выглядят все IPA прямо из App Store. Нужна расшифрованная копия (TrollStore/джейлбрейк или готовый расшифрованный IPA).")
             }
