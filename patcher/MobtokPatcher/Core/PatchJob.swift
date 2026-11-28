@@ -6,7 +6,7 @@ enum Workspace {
         let u = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return u
     }()
-    static var inbox: URL { make("Inbox") }
+    static var inbox: URL { make("Imports") }
     static var work: URL { make("Work") }
     static var output: URL { make("Output") }
     private static func make(_ n: String) -> URL {

@@ -12,7 +12,7 @@ targets:
     dependencies: [{ package: ZIPFoundation }]
     settings:
       PRODUCT_BUNDLE_IDENTIFIER: dev.mobtok.patcher
-      MARKETING_VERSION: "1.1.1"
+      MARKETING_VERSION: "1.1.2"
       CURRENT_PROJECT_VERSION: "2"
       INFOPLIST_KEY_CFBundleDisplayName: mobtok
       INFOPLIST_KEY_UISupportsDocumentBrowser: YES

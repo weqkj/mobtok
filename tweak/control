@@ -1,6 +1,6 @@
 Package: dev.mobtok.tweak
 Name: mobtok
-Version: 1.1.1
+Version: 1.1.2
 Architecture: iphoneos-arm64
 Description: Мод TikTok. Вдохновлён SkyTok (nebesnyy), код написан заново.
 Maintainer: mobtok
