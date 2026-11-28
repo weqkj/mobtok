@@ -6,7 +6,7 @@ enum Workspace {
         let u = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return u
     }()
-    static var inbox: URL { make("Inbox") }
+    static var inbox: URL { make("Imports") }
     static var work: URL { make("Work") }
     static var output: URL { make("Output") }
     private static func make(_ n: String) -> URL {
@@ -39,16 +39,19 @@ final class PatchJob: ObservableObject {
     var isRunning: Bool { ![.idle, .done, .failed].contains(phase) }
 
     func start(source: URL) async {
+        guard FileManager.default.fileExists(atPath: source.path) else { fail("Файл источника пропал. Выберите IPA заново."); return }
+        let size = (try? FileManager.default.attributesOfItem(atPath: source.path)[.size] as? Int) ?? -1
+        Log.shared.add("Сборка: \(source.lastPathComponent), \(size / 1_048_576) МБ, dylib: \(Bundle.main.url(forResource: "mobtok", withExtension: "dylib") != nil ? "есть" : "НЕТ")")
         let patcher = IPAPatcher(source: source,
                                  dylib: Bundle.main.url(forResource: "mobtok", withExtension: "dylib"),
                                  workDir: Workspace.work, outDir: Workspace.output)
         do {
             output = try await patcher.run { [weak self] p, ph, d in
-                Task { @MainActor in self?.progress = p; self?.phase = ph; self?.detail = d }
+                Task { @MainActor in self?.progress = p; self?.phase = ph; self?.detail = d; Log.shared.add("[\(ph.title)] \(d)") }
             }
             phase = .done; progress = 1
         } catch { fail(error.localizedDescription) }
     }
 
-    func fail(_ msg: String) { phase = .failed; detail = msg }
+    func fail(_ msg: String) { phase = .failed; progress = 0; detail = msg; Log.shared.add("ОШИБКА: \(msg)") }
 }

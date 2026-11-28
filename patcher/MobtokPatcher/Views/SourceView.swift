@@ -7,6 +7,8 @@ struct SourceView: View {
     @State private var targeted = false
     @State private var error: String?
     @State private var link = ""
+    @State private var showLog = false
+    @State private var showHelp = false
     @StateObject private var downloader = IPADownloader()
 
     private static let ipaType = UTType(filenameExtension: "ipa") ?? .data
@@ -33,13 +35,19 @@ struct SourceView: View {
             }
                 }
             }
+            HStack { Button("Как расшифровать TikTok") { showHelp = true }; Spacer(); Button("Журнал") { showLog = true } }
+                .font(.mtSub).padding(.horizontal, 16).padding(.bottom, 8)
             Button("Далее") { state.go(.install) }
                 .buttonStyle(PillButtonStyle()).disabled(state.sourceIPA == nil)
                 .opacity(state.sourceIPA == nil ? 0.5 : 1).rise(4)
         }
         .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 12)
-        .fileImporter(isPresented: $picking, allowedContentTypes: [Self.ipaType, .data, .archive]) { accept($0) }
+        .sheet(isPresented: $picking) {
+            DocumentPicker(onPick: { url in picking = false; accept(.success(url)) }, onCancel: { picking = false })
+        }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: error)
+        .sheet(isPresented: $showLog) { LogView() }
+        .sheet(isPresented: $showHelp) { DecryptHelpView() }
     }
 
     private var dropZone: some View {
@@ -133,9 +141,11 @@ struct SourceView: View {
         case .success(let url):
             Task {
                 do {
+                    Log.shared.add("Выбран файл: \(url.lastPathComponent)")
                     let dst = try await Self.importFile(url)
+                    Log.shared.add("Файл скопирован в рабочую папку")
                     withAnimation(.spring()) { state.sourceIPA = dst; error = nil }
-                } catch { self.error = "Не удалось открыть файл: \(error.localizedDescription)" }
+                } catch { Log.shared.add("ОШИБКА импорта: \(error)"); self.error = "Не удалось открыть файл: \(error.localizedDescription)" }
             }
         }
     }
@@ -147,19 +157,29 @@ struct SourceView: View {
             let fm = FileManager.default
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            // уникальное имя: не затираем исходник, если он уже лежит в Inbox
+            Log.write("Источник: \(url.path), существует: \(fm.fileExists(atPath: url.path))")
             let dst = Workspace.inbox.appendingPathComponent("\(UUID().uuidString).ipa")
-            var coordError: NSError?
-            var copyError: Error?
-            NSFileCoordinator().coordinate(readingItemAt: url, options: [.withoutChanges], error: &coordError) { readURL in
-                do { try fm.copyItem(at: readURL, to: dst) } catch { copyError = error }
+            var lastError: Error = PatchError("Файл не скопировался")
+            // 1) обычное копирование; 2) через координатор (подгружает файл из iCloud)
+            for attempt in 0..<2 {
+                do {
+                    if attempt == 0 { try fm.copyItem(at: url, to: dst) }
+                    else {
+                        var ce: NSError?; var inner: Error?
+                        NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &ce) { u in
+                            do { try fm.copyItem(at: u, to: dst) } catch { inner = error }
+                        }
+                        if let e = ce ?? inner as NSError? { throw e }
+                    }
+                    break
+                } catch { lastError = error; Log.write("Попытка \(attempt + 1) не удалась: \(error.localizedDescription)") }
             }
-            if let e = coordError ?? copyError as NSError? { throw e }
-            guard fm.fileExists(atPath: dst.path) else { throw PatchError("Файл не скопировался") }
-            // чистим старые импорты
-            for f in (try? fm.contentsOfDirectory(at: Workspace.inbox, includingPropertiesForKeys: nil)) ?? [] where f != dst {
+            guard fm.fileExists(atPath: dst.path) else { throw lastError }
+            for f in (try? fm.contentsOfDirectory(at: Workspace.inbox, includingPropertiesForKeys: nil)) ?? [] where f.lastPathComponent != dst.lastPathComponent {
                 try? fm.removeItem(at: f)
             }
+            let size = (try? fm.attributesOfItem(atPath: dst.path)[.size] as? Int) ?? -1
+            Log.write("Скопировано: \(size / 1_048_576) МБ → \(dst.lastPathComponent)")
             return dst
         }.value
     }
