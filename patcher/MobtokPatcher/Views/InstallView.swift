@@ -4,7 +4,8 @@ struct InstallView: View {
     @EnvironmentObject var state: AppState
     @State private var method: InstallMethod = .certificate
     @State private var certPicker = false
-    @State private var log: [String] = []
+    @State private var showLog = false
+    @State private var showHelp = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -40,13 +41,19 @@ struct InstallView: View {
             Text(method.hint).font(.mtFoot).foregroundStyle(Palette.muted)
                 .padding(.top, 8).padding(.horizontal, 16).id(method).transition(.opacity)
 
+            if state.job.phase == .failed {
+                HStack { Button("Как расшифровать") { showHelp = true }; Spacer(); Button("Журнал") { showLog = true } }
+                    .font(.mtSub).padding(.top, 10).padding(.horizontal, 16)
+            } else { HStack { Spacer(); Button("Журнал") { showLog = true } }.font(.mtSub).padding(.top, 10).padding(.horizontal, 16) }
             Spacer()
             Button(action: run) {
-                Text(state.job.phase == .done ? method.cta : "Собрать мод")
+                Text(state.job.phase == .done ? method.cta : state.job.phase == .failed ? "Повторить" : "Собрать мод")
             }
             .buttonStyle(PillButtonStyle()).disabled(state.job.isRunning).rise(3)
         }
         .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 12)
+        .sheet(isPresented: $showLog) { LogView() }
+        .sheet(isPresented: $showHelp) { DecryptHelpView() }
         .fileImporter(isPresented: $certPicker, allowedContentTypes: [.data], allowsMultipleSelection: true) { r in
             if case .success(let urls) = r { Task { await install(with: urls) } }
         }

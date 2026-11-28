@@ -49,7 +49,7 @@ enum Installer {
     }
 
     @MainActor
-    private static func share(_ url: URL) {
+    static func share(_ url: URL) {
         let vc = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }
             .first?.rootViewController?.present(vc, animated: true)

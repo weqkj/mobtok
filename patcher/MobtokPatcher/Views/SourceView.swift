@@ -7,6 +7,8 @@ struct SourceView: View {
     @State private var targeted = false
     @State private var error: String?
     @State private var link = ""
+    @State private var showLog = false
+    @State private var showHelp = false
     @StateObject private var downloader = IPADownloader()
 
     private static let ipaType = UTType(filenameExtension: "ipa") ?? .data
@@ -33,6 +35,8 @@ struct SourceView: View {
             }
                 }
             }
+            HStack { Button("Как расшифровать TikTok") { showHelp = true }; Spacer(); Button("Журнал") { showLog = true } }
+                .font(.mtSub).padding(.horizontal, 16).padding(.bottom, 8)
             Button("Далее") { state.go(.install) }
                 .buttonStyle(PillButtonStyle()).disabled(state.sourceIPA == nil)
                 .opacity(state.sourceIPA == nil ? 0.5 : 1).rise(4)
@@ -40,6 +44,8 @@ struct SourceView: View {
         .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 12)
         .fileImporter(isPresented: $picking, allowedContentTypes: [Self.ipaType, .data, .archive]) { accept($0) }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: error)
+        .sheet(isPresented: $showLog) { LogView() }
+        .sheet(isPresented: $showHelp) { DecryptHelpView() }
     }
 
     private var dropZone: some View {
@@ -133,9 +139,11 @@ struct SourceView: View {
         case .success(let url):
             Task {
                 do {
+                    Log.shared.add("Выбран файл: \(url.lastPathComponent)")
                     let dst = try await Self.importFile(url)
+                    Log.shared.add("Файл скопирован в рабочую папку")
                     withAnimation(.spring()) { state.sourceIPA = dst; error = nil }
-                } catch { self.error = "Не удалось открыть файл: \(error.localizedDescription)" }
+                } catch { Log.shared.add("ОШИБКА импорта: \(error)"); self.error = "Не удалось открыть файл: \(error.localizedDescription)" }
             }
         }
     }

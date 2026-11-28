@@ -4,7 +4,7 @@ import SwiftUI
 struct MobtokPatcherApp: App {
     @StateObject private var state = AppState()
 
-    init() { MTFont.registerAll() }
+    init() { MTFont.registerAll(); _ = Log.shared }
     var body: some Scene {
         WindowGroup {
             RootView().environmentObject(state)

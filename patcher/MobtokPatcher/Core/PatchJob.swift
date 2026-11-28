@@ -39,16 +39,18 @@ final class PatchJob: ObservableObject {
     var isRunning: Bool { ![.idle, .done, .failed].contains(phase) }
 
     func start(source: URL) async {
+        let size = (try? FileManager.default.attributesOfItem(atPath: source.path)[.size] as? Int) ?? -1
+        Log.shared.add("Сборка: \(source.lastPathComponent), \(size / 1_048_576) МБ, dylib: \(Bundle.main.url(forResource: "mobtok", withExtension: "dylib") != nil ? "есть" : "НЕТ")")
         let patcher = IPAPatcher(source: source,
                                  dylib: Bundle.main.url(forResource: "mobtok", withExtension: "dylib"),
                                  workDir: Workspace.work, outDir: Workspace.output)
         do {
             output = try await patcher.run { [weak self] p, ph, d in
-                Task { @MainActor in self?.progress = p; self?.phase = ph; self?.detail = d }
+                Task { @MainActor in self?.progress = p; self?.phase = ph; self?.detail = d; Log.shared.add("[\(ph.title)] \(d)") }
             }
             phase = .done; progress = 1
         } catch { fail(error.localizedDescription) }
     }
 
-    func fail(_ msg: String) { phase = .failed; detail = msg }
+    func fail(_ msg: String) { phase = .failed; progress = 0; detail = msg; Log.shared.add("ОШИБКА: \(msg)") }
 }
