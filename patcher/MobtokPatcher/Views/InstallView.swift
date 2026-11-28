@@ -61,7 +61,7 @@ struct InstallView: View {
             }.font(.mtSub).foregroundStyle(Palette.ink)
             ProgressView(value: state.job.progress).tint(state.job.phase == .failed ? Color(hex: 0xFFB4AB) : Palette.primary)
                 .animation(.easeInOut(duration: 0.4), value: state.job.progress)
-            Text(state.job.detail).font(.mtFoot).foregroundStyle(Palette.muted).lineLimit(2)
+            Text(state.job.detail).font(.mtFoot).foregroundStyle(Palette.muted).fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
         }.padding(16)
     }
 

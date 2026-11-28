@@ -64,7 +64,8 @@ struct IPAPatcher {
             defer { try? fm.removeItem(at: unpack) }
 
             report(0.05, .unpacking, source.lastPathComponent)
-            try fm.unzipItem(at: source, to: unpack)
+            do { try fm.unzipItem(at: source, to: unpack) }
+            catch { throw PatchError("Шаг: распаковка. Файл не открылся как IPA: \(error.localizedDescription)") }
 
             report(0.35, .checking, "Info.plist")
             let payload = unpack.appendingPathComponent("Payload")
@@ -75,20 +76,23 @@ struct IPAPatcher {
             guard let exe = info["CFBundleExecutable"] as? String else { throw PatchError("Не найден CFBundleExecutable") }
             let version = info["CFBundleShortVersionString"] as? String ?? "?"
             let binary = app.appendingPathComponent(exe)
-            if try MachO.isEncrypted(binary) { throw PatchError("IPA зашифрован. Нужен расшифрованный файл.") }
+            if try MachO.isEncrypted(binary) {
+                throw PatchError("Шаг: проверка шифрования. TikTok \(version) (\(exe)) зашифрован FairPlay: так выглядят все IPA прямо из App Store. Нужна расшифрованная копия (TrollStore/джейлбрейк или готовый расшифрованный IPA).")
+            }
 
             report(0.45, .injecting, "Поиск других модов…")
             let removed = try Self.stripOtherMods(app: app, binary: binary)
             if !removed.isEmpty { report(0.5, .injecting, "Удалено: " + removed.joined(separator: ", ")) }
 
             report(0.55, .injecting, "TikTok \(version)")
-            guard let dylib else { throw PatchError("mobtok.dylib не найден в сборке патчера") }
+            guard let dylib else { throw PatchError("Шаг: внедрение. mobtok.dylib не найден в патчере: переустановите его из свежей сборки Actions.") }
             let fw = app.appendingPathComponent("Frameworks", isDirectory: true)
             try fm.createDirectory(at: fw, withIntermediateDirectories: true)
             let dst = fw.appendingPathComponent("mobtok.dylib")
             try? fm.removeItem(at: dst)
             try fm.copyItem(at: dylib, to: dst)
-            try MachO.insertLoadDylib(at: binary, path: Self.loadPath)
+            do { try MachO.insertLoadDylib(at: binary, path: Self.loadPath) }
+            catch { throw PatchError("Шаг: внедрение в \(exe) (\(version)). \(error.localizedDescription)") }
 
             report(0.75, .packing, "mobtok.ipa")
             let out = outDir.appendingPathComponent("mobtok-\(version).ipa")
