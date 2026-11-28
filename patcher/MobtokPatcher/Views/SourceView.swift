@@ -42,7 +42,9 @@ struct SourceView: View {
                 .opacity(state.sourceIPA == nil ? 0.5 : 1).rise(4)
         }
         .padding(.horizontal, 20).padding(.top, 24).padding(.bottom, 12)
-        .fileImporter(isPresented: $picking, allowedContentTypes: [Self.ipaType, .data, .archive]) { accept($0) }
+        .sheet(isPresented: $picking) {
+            DocumentPicker(onPick: { url in picking = false; accept(.success(url)) }, onCancel: { picking = false })
+        }
         .animation(.spring(response: 0.4, dampingFraction: 0.8), value: error)
         .sheet(isPresented: $showLog) { LogView() }
         .sheet(isPresented: $showHelp) { DecryptHelpView() }
@@ -155,16 +157,24 @@ struct SourceView: View {
             let fm = FileManager.default
             let scoped = url.startAccessingSecurityScopedResource()
             defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            // уникальное имя: не затираем исходник, если он уже лежит в Inbox
+            Log.write("Источник: \(url.path), существует: \(fm.fileExists(atPath: url.path))")
             let dst = Workspace.inbox.appendingPathComponent("\(UUID().uuidString).ipa")
-            var coordError: NSError?
-            var copyError: Error?
-            NSFileCoordinator().coordinate(readingItemAt: url, options: [.withoutChanges], error: &coordError) { readURL in
-                do { try fm.copyItem(at: readURL, to: dst) } catch { copyError = error }
+            var lastError: Error = PatchError("Файл не скопировался")
+            // 1) обычное копирование; 2) через координатор (подгружает файл из iCloud)
+            for attempt in 0..<2 {
+                do {
+                    if attempt == 0 { try fm.copyItem(at: url, to: dst) }
+                    else {
+                        var ce: NSError?; var inner: Error?
+                        NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &ce) { u in
+                            do { try fm.copyItem(at: u, to: dst) } catch { inner = error }
+                        }
+                        if let e = ce ?? inner as NSError? { throw e }
+                    }
+                    break
+                } catch { lastError = error; Log.write("Попытка \(attempt + 1) не удалась: \(error.localizedDescription)") }
             }
-            if let e = coordError ?? copyError as NSError? { throw e }
-            guard fm.fileExists(atPath: dst.path) else { throw PatchError("Файл не скопировался") }
-            // чистим старые импорты
+            guard fm.fileExists(atPath: dst.path) else { throw lastError }
             for f in (try? fm.contentsOfDirectory(at: Workspace.inbox, includingPropertiesForKeys: nil)) ?? [] where f != dst {
                 try? fm.removeItem(at: f)
             }
